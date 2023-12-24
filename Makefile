@@ -14,9 +14,6 @@ linux-static:
 	$(DOCKER_IMAGE) \
 	make -C /src/ build-release
 
-install:
-	mv .gerbil/bin/gerbil-cbor /usr/local/bin/gerbil-cbor
-
 clean:
 	gerbil clean
 	gerbil clean all

@@ -54,7 +54,7 @@ Here's an example of a simple encoder callback:
   :std/contract
   :std/io
   :std/error
-  "gerbil-cbor/lib")
+  "cbor/lib")
 
 (defstruct point (x y) final: #t)
 ; As of this writing, this is an unassigned tag in the

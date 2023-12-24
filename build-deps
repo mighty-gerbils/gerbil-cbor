@@ -1,8 +1,8 @@
 (gerbil-build-deps-v2:
- (clan/gerbil-cbor/lib
-  "gerbil-cbor/lib"
+ (clan/cbor/lib
+  "cbor/lib"
   (gerbil/core
-   clan/gerbil-cbor/decoder
-   clan/gerbil-cbor/encoder
-   clan/gerbil-cbor/util)))
+   clan/cbor/decoder
+   clan/cbor/encoder
+   clan/cbor/util)))
 
