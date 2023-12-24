@@ -21,11 +21,11 @@
     (decoder reader)))
 
 (def (decoder reader)
-     (using (reader : BufferedReader)
-            ; read the first item
-            (let* ((item (reader.read-u8!))
-                   (decode-method (vector-ref +unmarshal+ item)))
-              (decode-method item reader))))
+  (using (reader : BufferedReader)
+         ; read the first item
+    (let* ((item (reader.read-u8!))
+           (decode-method (vector-ref +unmarshal+ item)))
+      (decode-method item reader))))
 
 ; The default tag handler strips the tag from the underlying value and returns it
 (def (default-tag-handler item)
@@ -35,20 +35,20 @@
 (def current-tag-handler (make-parameter default-tag-handler))
 
 (def (extract-raw-arg item buf)
-     (using ((item :~ fixnum?)
-             (buf :- BufferedReader))
-            (fxand 31 item)))
+  (using ((item :~ fixnum?)
+          (buf :- BufferedReader))
+    (fxand 31 item)))
 
 
 (defrule (register major-type arg method)
-         (vector-set! +unmarshal+ (data-item major-type arg) method))
+  (vector-set! +unmarshal+ (data-item major-type arg) method))
 
 (def (register-range major-type start stop method)
-     (using ((major-type :~ fixnum?)
-             (start :~ fixnum?)
-             (stop :~ fixnum?))
-            (for (i (in-range start (fx+ 1 stop)))
-                 (register major-type i method))))
+  (using ((major-type :~ fixnum?)
+          (start :~ fixnum?)
+          (stop :~ fixnum?))
+    (for (i (in-range start (fx+ 1 stop)))
+         (register major-type i method))))
 
 (def (malformed-message item _)
   (error "Malformed message with initial byte " item))
@@ -56,15 +56,18 @@
 (def (read-u8 _ buf)
   (using (buf :- BufferedReader)
     (buf.read-u8!)))
+
 (def (read-u16 _ buf)
-     (using (buf :- BufferedReader)
-            (buf.read-u16)))
+  (using (buf :- BufferedReader)
+    (buf.read-u16)))
+
 (def (read-u32 _ buf)
-     (using (buf :- BufferedReader)
-            (buf.read-u32)))
+  (using (buf :- BufferedReader)
+    (buf.read-u32)))
+
 (def (read-u64 _ buf)
-     (using (buf :- BufferedReader)
-            (buf.read-u64)))
+  (using (buf :- BufferedReader)
+    (buf.read-u64)))
 
 ; Reads a list from the buffered and decodes it recursively
 (def (read-list item buf f)
@@ -77,8 +80,8 @@
                     (decoder buf))))))
 
 (def (read-indefinite-list item buf (count 0))
-     (when (fx> count (max-indefinite-item))
-       (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
+  (when (fx> count (max-indefinite-item))
+    (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
      (let (item (decoder buf))
        (if (eq? item 'BREAK)
          '()
@@ -87,20 +90,20 @@
 ; only the value associated with the *last* instance of a key is returned. That is,
 ; if there are duplicates, we overwrite any existing keys.
 (def (read-map item buf f (table (make-hash-table)))
-     (let f ((count (1- (f item buf)))
-             (key (decoder buf))
-             (value (decoder buf)))
-       (begin
-         (hash-put! table key value)
-         (if (positive? count)
-           (f (1- count)
-              (decoder buf)
-              (decoder buf))
-           table))))
+  (let f ((count (1- (f item buf)))
+          (key (decoder buf))
+          (value (decoder buf)))
+    (begin
+      (hash-put! table key value)
+      (if (positive? count)
+        (f (1- count)
+           (decoder buf)
+           (decoder buf))
+        table))))
 
 (def (read-indefinite-map item buf (table (make-hash-table)) (count 0))
-     (when (fx> count (max-indefinite-item))
-       (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
+  (when (fx> count (max-indefinite-item))
+    (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
      (let (key (decoder buf))
        (if (not (eq? key 'BREAK))
          (begin
@@ -113,59 +116,59 @@
   (utf8->string (read-bytes item buf f)))
 
 (def (read-bytes item buf f)
-     (using (buf :- BufferedReader)
-            (let* ((count (f item buf))
-                   (bytebuffer (make-u8vector count))
-                   (readcount (Reader-read buf bytebuffer)))
-              bytebuffer)))
+  (using (buf :- BufferedReader)
+    (let* ((count (f item buf))
+           (bytebuffer (make-u8vector count))
+           (readcount (Reader-read buf bytebuffer)))
+      bytebuffer)))
 
 ; TODO: indefinite-length bytes
 (def (read-indefinite-bytes item buf)
-     (using (buf :- BufferedReader)
-            (u8vector-concatenate
-              (let f ((item (buf.read-u8!))
-                      (count 0))
-                (when (fx> count (max-indefinite-item))
-                  (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
-                (cond
-                  ((fx= item (data-item/const 2 31))
-                   (if (fx> count 0)
-                     (error "Found indefinite-length byte string while already decoding indefinite-length byte string. Malformed message." item)
-                     (f (buf.read-u8!)
-                        count)))
-                  ((fx= item (data-item/const 7 31))
-                   '())
-                  ; byte chunk, to be concatenated
-                  (((in-range? (data-item/const 2 0) (data-item/const 2 27)) item)
-                   (cons ((vector-ref +unmarshal+ item) item buf)
-                         (f (buf.read-u8!)
-                            (1+ count))))
-                  (else (error "Invalid data item while reading indefinite-length
-                               byte string" item)))))))
+  (using (buf :- BufferedReader)
+    (u8vector-concatenate
+      (let f ((item (buf.read-u8!))
+              (count 0))
+        (when (fx> count (max-indefinite-item))
+          (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
+        (cond
+          ((fx= item (data-item/const 2 31))
+           (if (fx> count 0)
+             (error "Found indefinite-length byte string while already decoding indefinite-length byte string. Malformed message." item)
+             (f (buf.read-u8!)
+                count)))
+          ((fx= item (data-item/const 7 31))
+           '())
+          ; byte chunk, to be concatenated
+          (((in-range? (data-item/const 2 0) (data-item/const 2 27)) item)
+           (cons ((vector-ref +unmarshal+ item) item buf)
+                 (f (buf.read-u8!)
+                    (1+ count))))
+          (else (error "Invalid data item while reading indefinite-length
+                       byte string" item)))))))
 
 (def (read-indefinite-text item buf)
-     (using (buf :- BufferedReader)
-            (string-join
-              (let f ((item (buf.read-u8!))
-                      (count 0))
-                (when (fx> count (max-indefinite-item))
-                  (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
-                (cond
-                  ((fx= item (data-item/const 3 31))
-                   (if (fx> count 0)
-                     (error "Found indefinite-length text string while already decoding indefinite-length text string. Malformed message." item)
-                     (f (buf.read-u8!)
-                        count)))
-                  ((fx= item (data-item/const 7 31))
-                   '())
-                  ; byte chunk, to be concatenated
-                  (((in-range? (data-item/const 3 0) (data-item/const 3 27)) item)
-                   ; TODO: don't rely on the default decoder for this
-                   (cons ((vector-ref +unmarshal+ item) item buf)
-                         (f (buf.read-u8!)
-                            (1+ count))))
-                  (else (error "Invalid data item while reading indefinite-length
-                               byte string" item)))) " ")))
+  (using (buf :- BufferedReader)
+    (string-join
+      (let f ((item (buf.read-u8!))
+              (count 0))
+        (when (fx> count (max-indefinite-item))
+          (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
+        (cond
+          ((fx= item (data-item/const 3 31))
+           (if (fx> count 0)
+             (error "Found indefinite-length text string while already decoding indefinite-length text string. Malformed message." item)
+             (f (buf.read-u8!)
+                count)))
+          ((fx= item (data-item/const 7 31))
+           '())
+          ; byte chunk, to be concatenated
+          (((in-range? (data-item/const 3 0) (data-item/const 3 27)) item)
+           ; TODO: don't rely on the default decoder for this
+           (cons ((vector-ref +unmarshal+ item) item buf)
+                 (f (buf.read-u8!)
+                    (1+ count))))
+          (else (error "Invalid data item while reading indefinite-length
+                       byte string" item)))) " ")))
 
 
 (def (read-negative item buf f)
@@ -173,35 +176,35 @@
 
 (def (read-f32 item buf)
   (using (buf :- BufferedReader)
-         (let* ((bytebuffer (make-u8vector 4))
-                (readcount (buf.read bytebuffer)))
-           (u8vector-float-ref bytebuffer 0 big))))
+    (let* ((bytebuffer (make-u8vector 4))
+           (readcount (buf.read bytebuffer)))
+      (u8vector-float-ref bytebuffer 0 big))))
 
 (def (read-f64 item buf)
   (using (buf :- BufferedReader)
-         (let* ((bytebuffer (make-u8vector 8))
-                (readcount (buf.read bytebuffer)))
-           (u8vector-double-ref bytebuffer 0 big))))
+    (let* ((bytebuffer (make-u8vector 8))
+           (readcount (buf.read bytebuffer)))
+      (u8vector-double-ref bytebuffer 0 big))))
 
 ; Converts a u16 in IEEE 754 FP16 format to a float (single precision)
 (def (u16->float half)
-     (let* ((exponent (fxand (fxarithmetic-shift-right half 10) #x1f))
-            (mantissa (fxand half #x3ff))
-            (val (cond
-                   ((fxzero? exponent)
-                    (fl* mantissa (fx- (fxarithmetic-shift-right 1 20))))
-                   ((not (fx= exponent 31))
-                    (fl* (fx+ mantissa 1024) (expt 2 (fx- exponent 24))))
-                   ((fxzero? mantissa)
-                    (+inf.0))
-                   (else
-                     (-inf.0)))))
-       (if (fxbit-set? 15 half)
-         (- val)
-         (val))))
+  (let* ((exponent (fxand (fxarithmetic-shift-right half 10) #x1f))
+         (mantissa (fxand half #x3ff))
+         (val (cond
+                ((fxzero? exponent)
+                 (fl* mantissa (fx- (fxarithmetic-shift-right 1 20))))
+                ((not (fx= exponent 31))
+                 (fl* (fx+ mantissa 1024) (expt 2 (fx- exponent 24))))
+                ((fxzero? mantissa)
+                 (+inf.0))
+                (else
+                  (-inf.0)))))
+    (if (fxbit-set? 15 half)
+      (- val)
+      (val))))
 
 (def (read-f16 item buf)
-     (u16->float (read-u16 item buf)))
+  (u16->float (read-u16 item buf)))
 
 (def (read-tag item buf f)
   (let* ((tag-num (f item buf))

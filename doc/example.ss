@@ -39,8 +39,8 @@
         (error "Do not know how to decode item." item)))))
 
 (def newpoint
-     (parameterize ((current-tag-handler tag-handler))
-       (decoder buffer)))
+  (parameterize ((current-tag-handler tag-handler))
+    (decoder buffer)))
 (using ((newpoint : point)
         (mypoint : point))
        (displayln "Equal? " (equal? mypoint newpoint)))

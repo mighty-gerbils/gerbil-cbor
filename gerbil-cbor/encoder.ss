@@ -86,36 +86,34 @@
         (8 27)))))
 
 (def (write-number writer item)
-     (using (writer :- BufferedWriter)
-            (cond
-              ((and (integer? item) (positive? item) (fixnum? item))
-               (write-positive-uint writer 0 item))
-              ((and (integer? item) (negative? item))
-               (write-positive-uint writer 1 (abs (1+ item))))
-              ((flonum? item)
-               (let (buf (make-u8vector 8 0))
-                 (u8vector-double-set! buf 0 item big)
-                 ; we do not currently support writing single-precision floats
-                 (fx+ (writer.write-u8 (data-item 7 27))
-                    (writer.write buf))))
-              (else
-                (BUG write-number "This function should not be called with non-numbers" item)))))
+  (using (writer :- BufferedWriter)
+    (cond
+      ((and (integer? item) (positive? item) (fixnum? item))
+       (write-positive-uint writer 0 item))
+      ((and (integer? item) (negative? item))
+       (write-positive-uint writer 1 (abs (1+ item))))
+      ((flonum? item)
+       (let (buf (make-u8vector 8 0))
+         (u8vector-double-set! buf 0 item big)
+         ; we do not currently support writing single-precision floats
+         (fx+ (writer.write-u8 (data-item 7 27))
+              (writer.write buf))))
+      (else
+        (BUG write-number "This function should not be called with non-numbers" item)))))
 
 (def (write-list writer item)
-     (using
-       ((writer :- BufferedWriter)
-        ; this is probably O(n)
-        (item :~ ##proper-list?))
-       (fx+ (writer.write-u8 (data-item 4 31))
-            (fold (lambda (item v)
-                    (fx+ (encoder writer item)
-                         v)) 0 item)
-            ; terminate the indefinite sequence
-            (writer.write-u8 (data-item 7 31)))))
+  (using ((writer :- BufferedWriter)
+     ; this is probably O(n)
+     (item :~ ##proper-list?))
+    (fx+ (writer.write-u8 (data-item 4 31))
+         (fold (lambda (item v)
+                 (fx+ (encoder writer item)
+                      v)) 0 item)
+         ; terminate the indefinite sequence
+         (writer.write-u8 (data-item 7 31)))))
 
 (def (write-u8vector writer item)
-  (using
-    ((writer :- BufferedWriter)
+  (using ((writer :- BufferedWriter)
      (item :~ u8vector?))
     (fx+ (write-positive-uint writer 2 (u8vector-length item))
          (writer.write item))))
