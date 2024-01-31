@@ -15,8 +15,8 @@
     ((_ major-type arg)
      (and (stx-fixnum? #'major-type) (stx-fixnum? #'arg))
      (with-syntax* (((values major-tag)
-                     (data-item (syntax->datum #'major-type)
-                                (syntax->datum #'arg))))
+                     (data-item (stx-e #'major-type)
+                                (stx-e #'arg))))
                    major-tag))))
 
 (defstruct cbor-tag (tag value)
