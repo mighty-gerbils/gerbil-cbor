@@ -11,7 +11,7 @@
   :std/error
   :std/text/utf8
   :std/srfi/1
-  "util")
+  "./util")
 
 (export (prefix-out encoder cbor-) current-hook object->cbor)
 
