@@ -13,7 +13,7 @@
   :std/srfi/1
   "./util")
 
-(export (prefix-out encoder cbor-) current-hook object->cbor)
+(export (prefix-out encoder cbor-) current-cbor-encoder-hook object->cbor)
 
 (def (object->cbor obj)
   (using (writer (open-buffered-writer #f) :- BufferedWriter)
@@ -24,7 +24,7 @@
   (match item
     ((? predicate) (encode writer item)) ... rest))
 
-(def current-hook #f)
+(def current-cbor-encoder-hook #f)
 
 (def (encoder buf item)
   (using (buf : BufferedWriter)
@@ -41,7 +41,7 @@
       ; These all have O(n) complexity
       (alist? write-alist)
       (proper-list? write-list)
-      (else ((current-hook) buf item)))))
+      (else ((current-cbor-encoder-hook) buf item)))))
 
 
 (def (default-hook writer item)
@@ -52,7 +52,7 @@
       ; TODO: other types
       (else (error "Don't know how to serialize item: " item)))))
 
-(set! current-hook (make-parameter default-hook))
+(set! current-cbor-encoder-hook (make-parameter default-hook))
 
 (def MAXu8 255)
 (def MAXu16 65535)

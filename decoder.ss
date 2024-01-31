@@ -140,7 +140,7 @@
             ; byte chunk, to be concatenated
             (((in-range? (data-item/const 2 0) (data-item/const 2 27)) item)
              (begin
-               (put ((vector-ref +unmarshal+ item) item buf))
+               (put! ((vector-ref +unmarshal+ item) item buf))
                (f (buf.read-u8!)
                   (1+ count))))
             ((fx= item (data-item/const 7 31))

@@ -62,7 +62,7 @@
       (check (simple-encode-decode (make-cbor-tag 123 "hello"))
              => "hello"))
     (test-case "custom type encode hook"
-      (parameterize ((current-hook custom-hook)
+      (parameterize ((current-cbor-encoder-hook custom-hook)
                      (current-tag-handler custom-tag-handler))
         (simple-encode-decode (make-mycustomstruct 12345 #f))))
     (test-case "object->cbor => cbor->object"
