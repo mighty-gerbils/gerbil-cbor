@@ -3,4 +3,6 @@
 (import :std/build-script)
 
 (defbuild-script
-  '("cbor/lib"))
+  '("encoder"
+    "decoder"
+    "util"))

@@ -48,7 +48,7 @@
   (using (writer :- BufferedWriter)
     (match item
       ((? date?)
-       (encoder (make-cbor-tag 0 (date->string item))))
+       (encoder writer (make-cbor-tag 0 (date->string item))))
       ; TODO: other types
       (else (error "Don't know how to serialize item: " item)))))
 
@@ -123,7 +123,7 @@
 ; Wrap a vector in a cbor tag so we can decode it back as a vector
 (def (wrap-vector writer item)
   ; Tag 41 is for homogeneous array types: https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml
-  (write-tag-as (make-cbor-tag 41 item) write-vector))
+  (write-tag-as writer (make-cbor-tag 41 item) write-vector))
 
 (def (write-vector writer item)
   (using ((writer :- BufferedWriter)
