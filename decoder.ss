@@ -6,8 +6,9 @@
         :std/misc/bytes
         :std/text/utf8
         :std/error
-        "util"
-        (for-syntax "util")
+        :std/misc/list-builder
+        "./util"
+        (for-syntax "./util")
         :std/io)
 (export (prefix-out decoder cbor-) current-tag-handler max-indefinite-item cbor->object)
 
@@ -79,13 +80,15 @@
       (cons item (f (1- count)
                     (decoder buf))))))
 
-(def (read-indefinite-list item buf (count 0))
-  (when (fx> count (max-indefinite-item))
-    (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
-  (let (item (decoder buf))
-    (if (eq? item 'BREAK)
-      '()
-      (cons item (read-indefinite-list item buf (1+ count))))))
+(def (read-indefinite-list item buf)
+  (with-list-builder (put!)
+    (let f ((count 0)
+            (item (decoder buf)))
+      (when (fx> count (max-indefinite-item))
+        (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
+      (when (not (eq? item 'BREAK))
+        (put! item)
+        (f (1+ count) (decoder buf))))))
 
 ; only the value associated with the *last* instance of a key is returned. That is,
 ; if there are duplicates, we overwrite any existing keys.
@@ -126,49 +129,48 @@
 (def (read-indefinite-bytes item buf)
   (using (buf :- BufferedReader)
     (u8vector-concatenate
-      (let f ((item (buf.read-u8!))
-              (count 0))
-        (when (fx> count (max-indefinite-item))
-          (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
-        (cond
-          ((fx= item (data-item/const 2 31))
-           (if (fx> count 0)
-             (error "Found indefinite-length byte string while already decoding indefinite-length byte string. Malformed message." item)
-             (f (buf.read-u8!)
-                count)))
-          ((fx= item (data-item/const 7 31))
-           '())
-          ; byte chunk, to be concatenated
-          (((in-range? (data-item/const 2 0) (data-item/const 2 27)) item)
-           (cons ((vector-ref +unmarshal+ item) item buf)
-                 (f (buf.read-u8!)
-                    (1+ count))))
-          (else (error "Invalid data item while reading indefinite-length
-                       byte string" item)))))))
+      (with-list-builder (put!)
+        (let f ((item (buf.read-u8!))
+                (count 0))
+          (cond
+            ((fx> count (max-indefinite-item))
+             (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
+            ((fx= item (data-item/const 2 31))
+             (error "Found indefinite-length byte string while already decoding indefinite-length byte string. Malformed message." item))
+            ; byte chunk, to be concatenated
+            (((in-range? (data-item/const 2 0) (data-item/const 2 27)) item)
+             (begin
+               (put ((vector-ref +unmarshal+ item) item buf))
+               (f (buf.read-u8!)
+                  (1+ count))))
+            ((fx= item (data-item/const 7 31))
+             '())
+            (else (error "Invalid data item while reading indefinite-length
+                         byte string" item))))))))
 
 (def (read-indefinite-text item buf)
   (using (buf :- BufferedReader)
     (string-join
-      (let f ((item (buf.read-u8!))
-              (count 0))
-        (when (fx> count (max-indefinite-item))
-          (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
-        (cond
-          ((fx= item (data-item/const 3 31))
-           (if (fx> count 0)
-             (error "Found indefinite-length text string while already decoding indefinite-length text string. Malformed message." item)
-             (f (buf.read-u8!)
-                count)))
-          ((fx= item (data-item/const 7 31))
-           '())
-          ; byte chunk, to be concatenated
-          (((in-range? (data-item/const 3 0) (data-item/const 3 27)) item)
-           ; TODO: don't rely on the default decoder for this
-           (cons ((vector-ref +unmarshal+ item) item buf)
-                 (f (buf.read-u8!)
-                    (1+ count))))
-          (else (error "Invalid data item while reading indefinite-length
-                       byte string" item)))) " ")))
+      (with-list-builder (put!)
+        (let f ((item (buf.read-u8!))
+                (count 0))
+          (cond
+            ((fx> count (max-indefinite-item))
+             (error "Exceeded max indefinite item allocation of " (max-indefinite-item)))
+            ((fx= item (data-item/const 3 31))
+             (error "Found indefinite-length text string while already decoding indefinite-length text string. Malformed message." item))
+            ; We've hit the end!
+            ((fx= item (data-item/const 7 31))
+             '())
+            ; byte chunk, to be concatenated
+            (((in-range? (data-item/const 3 0) (data-item/const 3 27)) item)
+             ; TODO: don't rely on the default decoder for this
+             (begin
+               (put! ((vector-ref +unmarshal+ item) item buf))
+               (f (buf.read-u8!)
+                  (1+ count))))
+            (else (error "Invalid data item while reading indefinite-length
+                         byte string" item))))) " ")))
 
 
 (def (read-negative item buf f)
