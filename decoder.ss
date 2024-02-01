@@ -12,6 +12,7 @@
         :std/io)
 (export (prefix-out decoder cbor-) current-tag-handler max-indefinite-item cbor->object)
 
+
 (def max-indefinite-item (make-parameter 1024))
 
 (def +unmarshal+ (make-vector 256 #f))
@@ -22,6 +23,7 @@
     (decoder reader)))
 
 (def (decoder reader)
+  (declare (not safe))
   (using (reader : BufferedReader)
          ; read the first item
          (let* ((item (reader.read-u8!))
@@ -301,4 +303,7 @@
   ; The special end terminator for indefinite-length data types
   (register 7 31 (lambda (_ _) 'BREAK)))
 
-
+#;(module <tests>
+  (import :std/iter)
+  (for ((i (in-range 256)))
+    (assert (not (equal? #f (vector-ref +unmarshal+ i))))))
