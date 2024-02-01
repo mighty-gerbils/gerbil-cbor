@@ -72,13 +72,13 @@
 
 ; Reads a list from the buffered and decodes it recursively
 (def (read-list item buf f)
-  (let f ((count (f item buf))
-          (item (decoder buf)))
-    (if (fx= 1 count)
-      ; properly terminate the list
-      (cons item '())
-      (cons item (f (1- count)
-                    (decoder buf))))))
+  (with-list-builder (put!)
+    (let r ((remaining (1- (f item buf)))
+            (item (decoder buf)))
+      (put! item)
+      (when (fx< 0 remaining)
+        (r (1- remaining)
+           (decoder buf))))))
 
 (def (read-indefinite-list item buf)
   (with-list-builder (put!)
